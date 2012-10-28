@@ -16,12 +16,11 @@ def get_access_token(c):
   data = dict(client_id = CLIENT_ID, client_secret = CLIENT_SECRET, grant_type = 'authorization_code', redirect_uri = REDIRECT_URI, code = c)
   h = Http()
   resp, content = h.request(TOKEN_URL, "POST", urlencode(data))
-  print "Response: ", resp
-  print "Content: ", content
+  return simplejson.loads(content)
 
 @route('/')
 def auth():
-  data = dict(client_id = CLIENT_ID,redirect_uri = REDIRECT_URL, response_type = 'code')
+  data = dict(client_id = CLIENT_ID,redirect_uri = REDIRECT_URI, response_type = 'code')
   r = AUTH_URL + urlencode(data)
   redirect(r)
   
