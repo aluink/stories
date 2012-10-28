@@ -1,5 +1,5 @@
 import bottle
-from bottle import route, get, post, run, request, redirect
+from bottle import route, get, post, run, request, redirect, template
 from httplib2 import Http
 from urllib import urlencode
 import simplejson
@@ -13,6 +13,7 @@ CLIENT_SECRET = 'b9fd849077544f57b1580d632c24971a'
 REDIRECT_URI = 'http://localhost:8000/input'
 
 def get_access_token(c):
+  # Consider caching something here
   data = dict(client_id = CLIENT_ID, client_secret = CLIENT_SECRET, grant_type = 'authorization_code', redirect_uri = REDIRECT_URI, code = c)
   h = Http()
   resp, content = h.request(TOKEN_URL, "POST", urlencode(data))
@@ -28,10 +29,9 @@ def auth():
 @route('/input')
 def home():
   code = request.GET.get("code")
-  get_access_token(code)
   if not code:
     return 'Missing code'
-  return '<form action="POST">Your Story: <textarea cols="80" rows="25" name="story"></textarea></br><input type="submit" value="GO!"/></form>'
+  return template('input', code = code)
 
 @route('/present')
 @post('/present')
