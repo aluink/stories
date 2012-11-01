@@ -4,6 +4,8 @@ from urllib.parse  import urlencode
 from functools     import partial
 from time          import time
 from concurrent.futures import as_completed, ThreadPoolExecutor
+from codecs        import decode
+from re            import search
 
 
 # to easily parse json data returned from the Instagram API
@@ -38,11 +40,24 @@ CLIENT_ID = 'c6dc9f5096444284ac66b894539ebd0a'
 
 # Client secret used to get an access_token.  This is private and not to be shared.
 # It's loaded as a command line argument
-CLIENT_SECRET = ''
+CLIENT_SECRET = '389fedca21764bbf959717be8be9861f'
 
 # URL the OAuth API redirects to.  This has to match what is setup in the client 
 # settings online.
 REDIRECT_URI = 'http://localhost:8000/input'
+
+""" 
+To help find "relevant" content, I've decided to find images with few tags.
+The idea is that an image with 40 tags where one of which matches my search,
+probably isn't related to my word.  However, an image with 2 tags where one 
+is my word is much more likely to be relevant.  Ugh, the joys of social
+media... and teenage girls :)
+ 
+This setting drive the maximum number of tags an image can have to be kept.
+So far 2-3 is a good balance
+"""
+TAG_COUNT = 3
+
 
 WORD_SIZE = 4
 
@@ -66,8 +81,8 @@ def get_access_token(c):
               grant_type = 'authorization_code', redirect_uri = REDIRECT_URI,
               code = c)
   h = Http()
-  resp, json = h.request(TOKEN_URL, "POST", urlencode(data))
-  return json
+  resp, content = h.request(TOKEN_URL, "POST", urlencode(data))
+  return loads(decode(content))
 
 """
 With an acces_token and a word, this function attempts to get a relevant image from 
@@ -75,12 +90,29 @@ the Instagram API
 """
 def get_image_for_word(token, word):
   h = Http()
+  start = time()
+ 
+  # Trim out leading/trailing non-alphas
+  # TODO: See if there's a library function for this
+  word = search('([a-zA-Z]+)',word)
+  if word:
+    word = word.group(0)
+  else:
+    return ''
+
   url = TAG_SEARCH_URL.replace('TAG',word)
-  url = url + token['access_token']
-  resp, json = h.request(url, "GET")
-  for el in json['data']:
-    if len(el['tags']) <= TAG_COUNT:
-      return "<img height=\"60px\" src=\"" + el['images']['thumbnail']['url'] + "\"/>"
+  url = url + token["access_token"]
+  resp, content = h.request(url, "GET")
+  try:
+    content = loads(decode(content))
+    for el in content['data']:
+      if len(el['tags']) <= TAG_COUNT:
+        return "<img height=\"60px\" src=\"" + el['images']['thumbnail']['url'] + "\"/>"
+  except Exception as e:
+    print(e)
+    print(word)
+  finally:
+    print(time() - start)
 
   # Instead of calling the 'next' pointer for the next page of data,
   # we'll just quit after the first page on the premise that this is
@@ -92,10 +124,13 @@ Uses get_image_for_word to get a set of images for a set of words
 """
 def get_images_for_words(token, words):
   m = dict()
-  for word in words:
-    img = get_image_for_word(token,words)
-    if len(img) > 0:
-      m[word] = get_image_for_word(token,word)
+  with ThreadPoolExecutor(max_workers=16) as executor:
+    futures = {executor.submit(get_image_for_word, token, word):word for word in words}
+    for future in as_completed(futures):
+      w = futures[future]
+      img = future.result()
+      if len(img) > 0:
+        m[w] = img
   return m
 
 #*********#
@@ -159,8 +194,11 @@ def process():
   if not code:
     return "Missing code"
   
+  start = time()
+
   access_token = get_access_token(code)
   story = request.POST.get("story")
+  print("token", (time() - start))
   start = time()
   
   words = [w for w in story.split(' ') if len(w) >= WORD_SIZE]
