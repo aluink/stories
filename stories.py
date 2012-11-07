@@ -36,7 +36,7 @@ TOKEN_URL = 'https://api.instagram.com/oauth/access_token/?'
 TAG_SEARCH_URL = 'https://api.instagram.com/v1/tags/TAG/media/recent?access_token='
 
 # Unique client ID setup in the online account settings, public info
-CLIENT_ID = 'c6dc9f5096444284ac66b894539ebd0a'
+CLIENT_ID = 'f59811831e834291908aabb3ae5dae1f'
 
 # Client secret used to get an access_token.  This is private and not to be shared.
 # It's loaded as a command line argument
