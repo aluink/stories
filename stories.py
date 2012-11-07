@@ -40,7 +40,7 @@ CLIENT_ID = 'c6dc9f5096444284ac66b894539ebd0a'
 
 # Client secret used to get an access_token.  This is private and not to be shared.
 # It's loaded as a command line argument
-CLIENT_SECRET = '389fedca21764bbf959717be8be9861f'
+CLIENT_SECRET = ''
 
 # URL the OAuth API redirects to.  This has to match what is setup in the client 
 # settings online.
